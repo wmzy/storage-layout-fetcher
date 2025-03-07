@@ -1,6 +1,6 @@
 {
   "name": "storage-layout-fetcher",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "fetch storage layout of verified contract",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
