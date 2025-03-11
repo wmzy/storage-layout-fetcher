@@ -1,4 +1,4 @@
-import os from 'node:os';
+import * as os from 'node:os';
 import compile from './compile';
 import { fetchContract } from './explorer';
 import { install } from './svm';
@@ -11,7 +11,7 @@ import {
   CompilerOutput,
 } from './types';
 import * as semver from 'semver';
-import path from 'node:path';
+import * as path from 'node:path';
 import { mainnet, sepolia } from './chain-explorers';
 
 export * from './chain-explorers';

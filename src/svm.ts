@@ -1,9 +1,11 @@
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
-import os from 'node:os';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
+import * as os from 'node:os';
 import { Readable, Writable } from 'node:stream';
+import * as semver from 'semver';
+import * as ff from 'fetch-fun';
 
 import { SolcArtifact, SolcBuildInfo } from './types';
 import { pipeline } from 'node:stream/promises';
@@ -38,11 +40,7 @@ export async function install(version: string, dir: string) {
     return binaryPath;
   } catch {}
 
-  const platform = getPlatform();
-  const artifactList: SolcArtifact = await fetch(
-    `https:${BASE_URL}/${platform}/list.json`
-  ).then((res) => res.json());
-  const artifact = artifactList.builds.find((a) => a.version === version);
+  const artifact = await getArtifact(version);
 
   if (!artifact) {
     throw new Error(`Artifact for version '${version}' not found`);
@@ -55,6 +53,22 @@ export async function install(version: string, dir: string) {
   } catch {
     return await downloadFile(artifact, dir, 'https');
   }
+}
+
+const buildByVersion: Map<string, SolcBuildInfo> = new Map();
+let latestRelease = '0.0.0';
+export async function getArtifact(version: string) {
+  if (semver.gt(version, latestRelease)) {
+    const platform = getPlatform();
+    const artifactList = await ff
+      .create()
+      .with(ff.retry, 3)
+      .with(ff.url, `https:${BASE_URL}/${platform}/list.json`)
+      .pipe(ff.fetchJSON<SolcArtifact>);
+    latestRelease = artifactList.latestRelease;
+    artifactList.builds.forEach((a) => buildByVersion.set(a.version, a));
+  }
+  return buildByVersion.get(version);
 }
 
 // TODO: retry
