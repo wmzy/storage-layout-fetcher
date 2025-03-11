@@ -14,6 +14,7 @@ import * as semver from 'semver';
 import path from 'node:path';
 import { mainnet, sepolia } from './chain-explorers';
 
+export * from './chain-explorers';
 export * from './types';
 
 export function create(
