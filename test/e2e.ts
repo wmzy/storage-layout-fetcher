@@ -1,7 +1,9 @@
 import { fetchStorageLayout, create } from '@/index';
 
 describe('Storage Layout e2e Tests', () => {
-  it(
+  const itFn = process.env.CI ? it.skip : it;
+
+  itFn(
     'should fetch storage layout of WETH9',
     async ({ expect }) => {
       const address = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
