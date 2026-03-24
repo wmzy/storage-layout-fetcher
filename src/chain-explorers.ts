@@ -1,84 +1,38 @@
-import * as ff from 'fetch-fun';
-import pThrottle from 'p-throttle';
-import { ExplorerOptions, ExplorerType } from './types';
+import {
+  SourceApi,
+  Fetcher,
+} from './types';
+import {
+  createDefaultSources,
+  createSourcifyClient,
+  createBlockscanClient,
+} from './source';
 
-const commonClient = ff
-  .create()
-  .pipe(ff.checkError, async (res) => {
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(
-        `unknown error: [url: ${res.url}] [HttpStatus: ${res.status}] - ${body}`
-      );
-    }
-  })
-  .pipe(ff.json);
+export {
+  createDefaultSources,
+  createSourcifyClient,
+  createBlockscanClient,
+};
 
-export function createEtherscanDefaultOptions(): ExplorerOptions {
-  // https://docs.ehterscan.xyz/support/rate-limits
-  const throttle = (f: any) =>
-    pThrottle({ limit: 5, interval: 1000 })(
-      pThrottle({ limit: 100_000, interval: 24 * 60 * 60 * 1000 })(f)
-    );
+export function createFetcher(
+  chainId: number,
+  options?: {
+    sources?: SourceApi[];
+    solcDir?: string;
+  }
+): Fetcher {
+  const sources = options?.sources || createDefaultSources();
+  const solcDir = options?.solcDir;
+
   return {
-    throttle,
-    retry: 3,
+    explorers: [],
+    sources,
+    chainId,
+    solcDir: solcDir || '',
   };
 }
 
-export function createBlockscoutDefaultOptions(): ExplorerOptions {
-  return {
-    // https://docs.blockscout.com/devs/apis/requests-and-limits
-    throttle: pThrottle({ limit: 10, interval: 1000 }),
-    retry: 3,
-  };
-}
-
-export function createExplorerClient(
-  type: ExplorerType,
-  baseUrl: string,
-  options: ExplorerOptions
-) {
-  const client = commonClient
-    .with(ff.baseUrl, baseUrl)
-    .pipe(ff.use, options.throttle)
-    .pipe(ff.retry, options.retry);
-  return {
-    type,
-     
-    client: client as any,
-    apiKey: options.apiKey,
-  };
-}
-
-export function etherscan(url: string, options?: Partial<ExplorerOptions>) {
-  return createExplorerClient('etherscan', url, {
-    ...createEtherscanDefaultOptions(),
-    ...options,
-  });
-}
-
-export function blockscout(url: string, options?: Partial<ExplorerOptions>) {
-  return createExplorerClient('blockscout', url, {
-    ...createBlockscoutDefaultOptions(),
-    ...options,
-  });
-}
-
-const etherscanDefault = createEtherscanDefaultOptions();
-export const mainnet = [
-  etherscan('https://api.etherscan.io/api', etherscanDefault),
-];
-export const sepolia = [
-  etherscan('https://api-sepolia.etherscan.io/api', etherscanDefault),
-];
-
-const mantlescanDefault = createEtherscanDefaultOptions();
-export const mantle = [
-  blockscout('https://explorer.mantle.xyz/api'),
-  etherscan('https://api.mantlescan.xyz/api', mantlescanDefault),
-];
-export const mantleSepolia = [
-  blockscout('https://explorer.sepolia.mantle.xyz/api'),
-  etherscan('https://api-sepolia.mantlescan.xyz/api', mantlescanDefault),
-];
+export const mainnet = createFetcher(1);
+export const sepolia = createFetcher(11155111);
+export const mantle = createFetcher(5000);
+export const mantleSepolia = createFetcher(5003);

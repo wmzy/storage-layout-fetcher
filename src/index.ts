@@ -1,6 +1,7 @@
 import * as os from 'node:os';
 import compile from './compile';
 import { fetchContract } from './explorer';
+import { fetchContractFromSources, createDefaultSources } from './source';
 import { install } from './svm';
 import { transform } from './transform';
 import {
@@ -9,31 +10,47 @@ import {
   ContractInfo,
   StorageLayout,
   CompilerOutput,
+  SourceApi,
 } from './types';
 import * as semver from 'semver';
 import * as path from 'node:path';
-import { mainnet, sepolia } from './chain-explorers';
 
-export * from './chain-explorers';
+export * from './source';
 export * from './types';
 
 export function create(
   options?: Partial<Fetcher> & { etherscanApiKey?: string }
 ): Fetcher {
-  const { explorers, solcDir, etherscanApiKey } = options || {};
-  const ex = explorers || [...mainnet, ...sepolia];
+  const { explorers, solcDir, etherscanApiKey, sources, chainId } = options || {};
+  
+  const defaultSources = createDefaultSources();
+  
   return {
-    explorers: etherscanApiKey
-      ? ex.map((e) =>
-          e.type === 'etherscan' ? { ...e, key: etherscanApiKey } : e
-        )
-      : ex,
+    explorers: explorers || [],
     solcDir: solcDir || path.join(os.tmpdir(), 'storage-layout-fetcher'),
+    sources: sources || defaultSources,
+    chainId: chainId || 1,
   };
 }
 
-export async function fetchStorageLayout(client: Fetcher, address: Address) {
-  const contractInfo = await fetchContract(address, client.explorers);
+export async function fetchStorageLayout(
+  client: Fetcher,
+  address: Address
+): Promise<StorageLayout> {
+  let contractInfo: ContractInfo | null = null;
+
+  if (client.sources && client.chainId) {
+    contractInfo = await fetchContractFromSources(
+      client.chainId,
+      address,
+      client.sources
+    );
+  }
+
+  if (!contractInfo && client.explorers && client.explorers.length > 0) {
+    contractInfo = await fetchContract(address, client.explorers);
+  }
+
   if (!contractInfo) {
     throw new Error('Contract verify information not found');
   }
@@ -41,6 +58,7 @@ export async function fetchStorageLayout(client: Fetcher, address: Address) {
   if (contractInfo.sourceCode.language === 'Vyper') {
     throw new Error('Vyper contracts are not supported yet.');
   }
+  
   return getStorageLayout(
     await ensureSolidityVersion(contractInfo),
     client.solcDir

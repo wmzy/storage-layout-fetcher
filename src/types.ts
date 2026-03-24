@@ -14,7 +14,68 @@ export type ExplorerOptions = {
   apiKey?: string;
 };
 
-export type Fetcher = { explorers: ExplorerApi[]; solcDir: string };
+export type SourceType = 'sourcify' | 'blockscan';
+
+export type SourceApi = {
+  type: SourceType;
+  client: any;
+};
+
+export type SourceConfig = {
+  baseUrl?: string;
+  throttle?: <T extends (...args: any[]) => any>(fn: T) => T;
+  retry?: number;
+};
+
+export type SourcifyCompilation = {
+  language: 'Solidity' | 'Vyper';
+  compiler: string;
+  compilerVersion: string;
+  compilerSettings: CompilerSettings;
+  name: string;
+  fullyQualifiedName: string;
+};
+
+export type SourcifyDeployment = {
+  transactionHash: string;
+  blockNumber: string;
+  transactionIndex: string;
+  deployer: string;
+};
+
+export type SourcifyContractResponse = {
+  sources: Record<string, { content: string }>;
+  compilation: SourcifyCompilation;
+  deployment?: SourcifyDeployment;
+  match: 'match' | 'partial_match' | null;
+  creationMatch?: 'match' | null;
+  runtimeMatch?: 'match' | null;
+  chainId: string;
+  address: string;
+  matchId?: string;
+  verifiedAt?: string;
+};
+
+export type BlockscanContractResponse = {
+  explorerName: string;
+  explorerLink: string;
+  favicon: string | null;
+  status: '1' | '0';
+  result: string;
+  ext: string;
+  contractName: string;
+  proxyResult?: string | null;
+  proxyContractName?: string | null;
+  proxyExt?: string | null;
+  proxyAddress?: string | null;
+};
+
+export type Fetcher = { 
+  explorers: ExplorerApi[]; 
+  solcDir: string;
+  sources?: SourceApi[];
+  chainId?: number;
+};
 
 export type StorageLayout = {
   storage: unknown[];
