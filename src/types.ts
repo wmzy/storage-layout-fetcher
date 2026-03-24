@@ -1,10 +1,10 @@
-import type { Client } from 'fetch-fun';
 export type Address = `0x${string}`;
 
 export type ExplorerType = 'etherscan' | 'blockscout';
 export type ExplorerApi = {
   type: ExplorerType;
-  client: Client;
+   
+  client: any;
   key?: string;
 };
 

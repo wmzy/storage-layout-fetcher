@@ -4,13 +4,12 @@ import { ExplorerOptions, ExplorerType } from './types';
 
 const commonClient = ff
   .create()
-  .pipe(ff.error, (res) => {
+  .pipe(ff.checkError, async (res) => {
     if (!res.ok) {
-      return res.text().then((body) => {
-        throw new Error(
-          `unknown error: [url: ${res.url}] [HttpStatus: ${res.status}] - ${body}`
-        );
-      });
+      const body = await res.text();
+      throw new Error(
+        `unknown error: [url: ${res.url}] [HttpStatus: ${res.status}] - ${body}`
+      );
     }
   })
   .pipe(ff.json);
@@ -46,7 +45,8 @@ export function createExplorerClient(
     .pipe(ff.retry, options.retry);
   return {
     type,
-    client,
+     
+    client: client as any,
     apiKey: options.apiKey,
   };
 }

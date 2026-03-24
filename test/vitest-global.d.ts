@@ -1,10 +1,10 @@
 /// <reference types="vitest/globals" />
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
+type ImportMetaEnv = {
   readonly VITE_ETHERSCAN_API_KEY: string;
 }
 
-interface ImportMeta {
+type ImportMeta = {
   readonly env: ImportMetaEnv;
 }

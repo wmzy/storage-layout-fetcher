@@ -18,9 +18,6 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       external: /^[^\/\.].*/,
-      output: {
-        interop: 'esModule',
-      },
     },
   },
   resolve: {

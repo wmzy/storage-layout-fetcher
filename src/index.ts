@@ -72,11 +72,26 @@ async function getStorageLayout(
   const out = await compile(solcPath, JSON.stringify(input));
   const output = JSON.parse(out) as CompilerOutput;
   if (contractFilePath) {
-    return output.contracts[contractFilePath][contractName].storageLayout;
+    const fileContracts = output.contracts[contractFilePath];
+    if (!fileContracts) {
+      throw new Error(`Contract file not found: ${contractFilePath}`);
+    }
+    const contract = fileContracts[contractName];
+    if (!contract) {
+      throw new Error(`Contract not found: ${contractName}`);
+    }
+    return contract.storageLayout;
   }
   const contracts = Object.values(output.contracts);
-  const c = contracts.find((c) => contractName in c)!;
-  return c[contractName].storageLayout;
+  const c = contracts.find((c) => contractName in c);
+  if (!c) {
+    throw new Error(`Contract not found: ${contractName}`);
+  }
+  const targetContract = c[contractName];
+  if (!targetContract) {
+    throw new Error(`Contract not found: ${contractName}`);
+  }
+  return targetContract.storageLayout;
 }
 
 async function ensureSolidityVersion(contractInfo: ContractInfo) {
@@ -86,10 +101,13 @@ async function ensureSolidityVersion(contractInfo: ContractInfo) {
     const { sources } = sourceCode;
     const newSources = Object.keys(sources).reduce(
       (r, source) => {
-        const s = sources[source].content;
+        const src = sources[source];
+        if (!src) {
+          return r;
+        }
         return {
           ...r,
-          [source]: { content: transform(s) },
+          [source]: { content: transform(src.content) },
         };
       },
       {} as Record<string, { content: string }>

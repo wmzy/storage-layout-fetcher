@@ -28,8 +28,8 @@ function fetchContractFromEtherscan(address: string, explorer: ExplorerApi) {
   return explorer.client
     .with(ff.url, url)
     .pipe(ff.fetchData<RpcResponse<[EtherscanContractSources]>>)
-    .then((res) => res.result[0])
-    .then((r) => {
+    .then((res: RpcResponse<[EtherscanContractSources]>) => res.result[0])
+    .then((r: EtherscanContractSources) => {
       if (!r.SourceCode) {
         return null;
       }
@@ -111,15 +111,15 @@ export function fetchContractSourcesFromBlockscout(
     .pipe(
       ff.fetchData<RpcResponse<[{ AdditionalSources?: Source[] } & TopSource]>>
     )
-    .then((res) => {
+    .then((res: RpcResponse<[{ AdditionalSources?: Source[] } & TopSource]>) => {
       if (res.status === '1') {
         return res.result[0];
       }
       throw new Error(res.message);
     })
-    .then((json) =>
+    .then((json: { AdditionalSources?: Source[] } & TopSource) =>
       (json.AdditionalSources || []).reduce(
-        (r, source) => {
+        (r: Record<string, { content: string }>, source: Source) => {
           r[source.Filename] = { content: source.SourceCode };
           return r;
         },
