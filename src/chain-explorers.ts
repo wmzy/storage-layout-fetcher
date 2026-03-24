@@ -25,7 +25,6 @@ export function createFetcher(
   const solcDir = options?.solcDir;
 
   return {
-    explorers: [],
     sources,
     chainId,
     solcDir: solcDir || '',
