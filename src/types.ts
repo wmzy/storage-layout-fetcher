@@ -71,7 +71,6 @@ export type BlockscanContractResponse = {
 };
 
 export type Fetcher = { 
-  explorers: ExplorerApi[]; 
   solcDir: string;
   sources?: SourceApi[];
   chainId?: number;

@@ -8,8 +8,6 @@ import {
   CompilerSettings,
 } from './types';
 
-import { fetchContract } from './explorer';
-
 const SOURCIFY_BASE_URL = 'https://sourcify.dev/server';
 const BLOCKSCAN_BASE_URL = 'https://vscode.blockscan.com/srcapi';
 
@@ -31,6 +29,7 @@ type SourcifyApiV2Response = {
 function createBaseClient() {
   return ff
     .create()
+    .pipe(ff.json)
     .pipe(ff.checkError, async (res) => {
       if (!res.ok) {
         const body = await res.text();
@@ -39,7 +38,7 @@ function createBaseClient() {
         );
       }
     })
-    .pipe(ff.json);
+    ;
 }
 
 export function createSourcifyClient(config?: SourceConfig): SourceApi {
@@ -52,7 +51,7 @@ export function createSourcifyClient(config?: SourceConfig): SourceApi {
 
   return {
     type: 'sourcify',
-    client: client.with(ff.baseUrl, config?.baseUrl || SOURCIFY_BASE_URL) as any,
+    client: client.with(ff.baseUrl, config?.baseUrl || SOURCIFY_BASE_URL),
   };
 }
 
@@ -135,11 +134,13 @@ async function fetchFromBlockscan(
       return null;
     }
 
-    const ext = response.ext || 'sol';
-    const fileName = `contract.${ext}`;
-
-    return {
-      sourceCode: {
+    let sourceCode;
+    try {
+      sourceCode = JSON.parse(response.result);
+    } catch {
+      const ext = response.ext || 'sol';
+      const fileName = `contract.${ext}`;
+      sourceCode = {
         language: 'Solidity',
         sources: {
           [fileName]: { content: response.result },
@@ -147,12 +148,34 @@ async function fetchFromBlockscan(
         settings: {
           optimizer: { enabled: false, runs: 200 },
         },
+      };
+    }
+
+    const contractFilePath = Object.keys(sourceCode.sources || {})[0];
+    const contractName = response.contractName;
+
+    let compilerVersion = sourceCode.compilerVersion;
+    if (!compilerVersion) {
+      const evmVersion = sourceCode.settings?.evmVersion;
+      if (evmVersion === 'paris' || evmVersion === 'shanghai') {
+        compilerVersion = '0.8.20';
+      } else {
+        compilerVersion = '0.8.0';
+      }
+    }
+
+    return {
+      sourceCode: {
+        language: sourceCode.language || 'Solidity',
+        sources: sourceCode.sources || {},
+        settings: sourceCode.settings || { optimizer: { enabled: false, runs: 200 } },
       },
-      contractFilePath: fileName,
-      contractName: response.contractName,
-      compilerVersion: '0.8.0',
+      contractFilePath,
+      contractName,
+      compilerVersion,
     };
-  } catch {
+  } catch (e) {
+    console.log('error', e);
     return null;
   }
 }

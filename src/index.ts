@@ -1,6 +1,5 @@
 import * as os from 'node:os';
 import compile from './compile';
-import { fetchContract } from './explorer';
 import { fetchContractFromSources, createDefaultSources } from './source';
 import { install } from './svm';
 import { transform } from './transform';
@@ -10,7 +9,6 @@ import {
   ContractInfo,
   StorageLayout,
   CompilerOutput,
-  SourceApi,
 } from './types';
 import * as semver from 'semver';
 import * as path from 'node:path';
@@ -19,14 +17,13 @@ export * from './source';
 export * from './types';
 
 export function create(
-  options?: Partial<Fetcher> & { etherscanApiKey?: string }
+  options?: Partial<Fetcher>
 ): Fetcher {
-  const { explorers, solcDir, etherscanApiKey, sources, chainId } = options || {};
+  const { solcDir, sources, chainId } = options || {};
   
   const defaultSources = createDefaultSources();
   
   return {
-    explorers: explorers || [],
     solcDir: solcDir || path.join(os.tmpdir(), 'storage-layout-fetcher'),
     sources: sources || defaultSources,
     chainId: chainId || 1,
@@ -45,10 +42,6 @@ export async function fetchStorageLayout(
       address,
       client.sources
     );
-  }
-
-  if (!contractInfo && client.explorers && client.explorers.length > 0) {
-    contractInfo = await fetchContract(address, client.explorers);
   }
 
   if (!contractInfo) {
@@ -89,6 +82,10 @@ async function getStorageLayout(
   );
   const out = await compile(solcPath, JSON.stringify(input));
   const output = JSON.parse(out) as CompilerOutput;
+  if (!output.contracts) {
+    const errors = (output as any).errors || out;
+    throw new Error(`Compilation failed: ${typeof errors === 'string' ? errors : JSON.stringify(errors)}`);
+  }
   if (contractFilePath) {
     const fileContracts = output.contracts[contractFilePath];
     if (!fileContracts) {
